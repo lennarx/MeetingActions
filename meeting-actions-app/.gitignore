@@ -1,0 +1,38 @@
+## .NET
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+## Visual Studio
+.vs/
+.vscode/
+
+## Rider
+.idea/
+
+## Database
+*.db
+*.db-shm
+*.db-wal
+
+## Logs
+*.log
+
+## NuGet
+*.nupkg
+packages/
+
+## Build
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Aa]rtifacts/
+
+## Environment
+appsettings.*.json
+!appsettings.json
+!appsettings.Development.json
