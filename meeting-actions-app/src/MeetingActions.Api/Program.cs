@@ -12,22 +12,38 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// Add CORS
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
+
 builder.Services.AddDbContext<MeetingActionsDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 var app = builder.Build();
+
+// Use CORS - Must be before other middleware
+app.UseCors();
 
 // Configure middleware
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
-    
+
     // Redirect root to Swagger UI
     app.MapGet("/", () => Results.Redirect("/swagger")).ExcludeFromDescription();
 }
-
-app.UseHttpsRedirection();
+else
+{
+    app.UseHttpsRedirection();
+}
 
 // Endpoints
 var v1 = app.MapGroup("/v1");
@@ -114,39 +130,42 @@ v1.MapGet("/jobs/{jobId:guid}/result", async (Guid jobId, MeetingActionsDbContex
 })
 .WithName("GetJobResult");
 
-// POST /v1/jobs/{jobId}/_dev/complete - Dev endpoint to complete job
-v1.MapPost("/jobs/{jobId:guid}/_dev/complete", async (Guid jobId, CompleteJobRequest request, MeetingActionsDbContext db) =>
+// POST /v1/jobs/{jobId}/_dev/complete - Dev endpoint to complete job (Development only)
+if (app.Environment.IsDevelopment())
 {
-    var job = await db.Jobs
-        .Include(j => j.Result)
-        .FirstOrDefaultAsync(j => j.Id == jobId);
-
-    if (job is null)
+    v1.MapPost("/jobs/{jobId:guid}/_dev/complete", async (Guid jobId, CompleteJobRequest request, MeetingActionsDbContext db) =>
     {
-        return Results.NotFound(new { error = "Job not found" });
-    }
+        var job = await db.Jobs
+            .Include(j => j.Result)
+            .FirstOrDefaultAsync(j => j.Id == jobId);
 
-    if (job.Result is not null)
-    {
-        return Results.Conflict(new { error = "Job already has a result" });
-    }
+        if (job is null)
+        {
+            return Results.NotFound(new { error = "Job not found" });
+        }
 
-    job.Status = JobStatus.Done;
-    job.UpdatedAtUtc = DateTime.UtcNow;
+        if (job.Result is not null)
+        {
+            return Results.Conflict(new { error = "Job already has a result" });
+        }
 
-    var result = new JobResult
-    {
-        JobId = jobId,
-        ResultJson = request.ResultJson,
-        CreatedAtUtc = DateTime.UtcNow
-    };
+        job.Status = JobStatus.Done;
+        job.UpdatedAtUtc = DateTime.UtcNow;
 
-    db.JobResults.Add(result);
-    await db.SaveChangesAsync();
+        var result = new JobResult
+        {
+            JobId = jobId,
+            ResultJson = request.ResultJson,
+            CreatedAtUtc = DateTime.UtcNow
+        };
 
-    return Results.Ok(new { message = "Job completed successfully" });
-})
-.WithName("CompleteJobDev")
-.WithTags("Development");
+        db.JobResults.Add(result);
+        await db.SaveChangesAsync();
+
+        return Results.Ok(new { message = "Job completed successfully" });
+    })
+    .WithName("CompleteJobDev")
+    .WithTags("Development");
+}
 
 app.Run();
