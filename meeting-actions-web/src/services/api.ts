@@ -5,8 +5,25 @@ import type {
   JobResultResponse
 } from '../types/api';
 
-// Base API URL - Use environment variable or default to localhost:5000
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/v1';
+const DEV_API_BASE = 'http://localhost:5000/v1';
+const PROD_API_BASE = 'https://meeting-actions-api-a0cngbg0g7crcbav.centralus-01.azurewebsites.net/v1';
+
+function normalizeApiBase(rawBase: string): string {
+  const trimmed = rawBase.trim().replace(/\/+$/, '');
+  return /\/v1$/i.test(trimmed) ? trimmed : `${trimmed}/v1`;
+}
+
+function resolveApiBase(): string {
+  const configured = import.meta.env.VITE_API_URL;
+
+  if (typeof configured === 'string' && configured.trim().length > 0) {
+    return normalizeApiBase(configured);
+  }
+
+  return import.meta.env.DEV ? DEV_API_BASE : PROD_API_BASE;
+}
+
+const API_BASE = resolveApiBase();
 
 /**
  * Helper function to handle API responses
