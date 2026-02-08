@@ -1,16 +1,20 @@
 // Enums matching backend contracts
-export enum InputType {
-  Text = 0,
-  Audio = 1,
-  Video = 2
-}
+export const InputType = {
+  Text: 0,
+  Audio: 1,
+  Video: 2
+} as const;
 
-export enum JobStatus {
-  Pending = 0,
-  Processing = 1,
-  Done = 2,
-  Failed = 3
-}
+export type InputType = (typeof InputType)[keyof typeof InputType];
+
+export const JobStatus = {
+  Pending: 0,
+  Processing: 1,
+  Done: 2,
+  Failed: 3
+} as const;
+
+export type JobStatus = (typeof JobStatus)[keyof typeof JobStatus];
 
 // Request types
 export interface CreateJobRequest {
